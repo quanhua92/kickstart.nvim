@@ -785,8 +785,8 @@ do
         python = {
           analysis = {
             useLibraryCodeForTypes = true,
-            indexing = false,
-            autoImportCompletions = false,
+            indexing = true,
+            autoImportCompletions = true,
           },
         },
       },
