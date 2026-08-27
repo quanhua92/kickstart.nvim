@@ -1,6 +1,7 @@
 -- multicursor.nvim: multiple cursors (branch 1.0)
--- Adapted keymaps: <leader>s is the search group in this config, so match-skip
--- actions live under the <leader>c ([C]ursor) group instead.
+-- Adapted keymaps: <leader>s is the search group and <leader>c is the code
+-- group in this config, so match-skip actions live under <leader>m
+-- ([M]ulticursor) instead.
 vim.pack.add { { src = 'https://github.com/jake-stewart/multicursor.nvim', branch = '1.0' } }
 
 local mc = require 'multicursor-nvim'
@@ -17,28 +18,28 @@ set({ 'n', 'x' }, '<leader><down>', function() mc.lineSkipCursor(1) end, { desc 
 -- Add / skip a cursor on the next/previous match of the word under the cursor.
 set({ 'n', 'x' }, '<leader>n', function() mc.matchAddCursor(1) end, { desc = 'MC: Add Next Match' })
 set({ 'n', 'x' }, '<leader>N', function() mc.matchAddCursor(-1) end, { desc = 'MC: Add Prev Match' })
-set({ 'n', 'x' }, '<leader>cn', function() mc.matchSkipCursor(1) end, { desc = 'MC: Skip Next Match' })
-set({ 'n', 'x' }, '<leader>cN', function() mc.matchSkipCursor(-1) end, { desc = 'MC: Skip Prev Match' })
+set({ 'n', 'x' }, '<leader>mn', function() mc.matchSkipCursor(1) end, { desc = 'MC: Skip Next Match' })
+set({ 'n', 'x' }, '<leader>mN', function() mc.matchSkipCursor(-1) end, { desc = 'MC: Skip Prev Match' })
 
 -- Add a cursor to every match of the word under the cursor in the buffer.
-set({ 'n', 'x' }, '<leader>ca', mc.matchAllAddCursors, { desc = 'MC: Add All Matches' })
+set({ 'n', 'x' }, '<leader>ma', mc.matchAllAddCursors, { desc = 'MC: Add All Matches' })
 
 -- Add cursors to every match and drop straight into change-word mode so you
 -- can type the replacement once and apply it everywhere. matchAllAddCursors
 -- places each cursor at the start of the matched word, so `cw` replaces it.
-set('n', '<leader>cR', function()
+set('n', '<leader>mR', function()
   mc.matchAllAddCursors()
-  mc.feedkeys('cw')
+  mc.feedkeys 'cw'
 end, { desc = 'MC: Add All & Replace Word' })
 
 -- Add a cursor to every match of the LAST search (/ register). Unlike
 -- matchAllAddCursors this matches anything you searched for, including parts
--- of a word (e.g. "foo" inside "foobar"). Flow: /pattern<cr> -> <leader>c/
+-- of a word (e.g. "foo" inside "foobar"). Flow: /pattern<cr> -> <leader>m/
 -- -> cw -> type replacement -> <esc>.
-set('n', '<leader>c/', mc.searchAllAddCursors, { desc = 'MC: Add All Search Matches' })
+set('n', '<leader>m/', mc.searchAllAddCursors, { desc = 'MC: Add All Search Matches' })
 
 -- Restore cursors you accidentally cleared.
-set('n', '<leader>cr', mc.restoreCursors, { desc = 'MC: Restore Cursors' })
+set('n', '<leader>mr', mc.restoreCursors, { desc = 'MC: Restore Cursors' })
 
 -- Add/remove cursors with the mouse.
 set('n', '<c-leftmouse>', mc.handleMouse)
@@ -77,6 +78,6 @@ hl(0, 'MultiCursorDisabledCursor', { reverse = true })
 hl(0, 'MultiCursorDisabledVisual', { link = 'Visual' })
 hl(0, 'MultiCursorDisabledSign', { link = 'SignColumn' })
 
--- Register the <leader>c group in which-key.
+-- Register the <leader>m group in which-key.
 local ok, wk = pcall(require, 'which-key')
-if ok then wk.add { { '<leader>c', group = '[C]ursor (multicursor)' } } end
+if ok then wk.add { { '<leader>m', group = '[M]ulticursor', mode = { 'n', 'x' } } } end

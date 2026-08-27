@@ -377,11 +377,6 @@ do
         return
       end
 
-      -- Custom: Copilot auth on install/update
-      if name == 'copilot.lua' then
-        vim.schedule(function() vim.cmd 'Copilot auth' end)
-        return
-      end
     end,
   })
 
@@ -444,6 +439,7 @@ do
       { '<leader>t', group = '[T]erminal' },
       { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } }, -- Enable gitsigns recommended keymaps first
       { 'gr', group = 'LSP Actions', mode = { 'n' } },
+      { '<leader>c', group = '[C]ode', mode = { 'n', 'x' } },
     },
   }
 
@@ -502,6 +498,12 @@ do
   -- - sd'   - [S]urround [D]elete [']quotes
   -- - sr)'  - [S]urround [R]eplace [)] [']
   require('mini.surround').setup()
+
+  -- Toggle comments (gc operator: gcc line, gcip paragraph, gcw word).
+  -- <leader>cc aliases the toggle for the [C]ode group (SECTION 6).
+  require('mini.comment').setup()
+  vim.keymap.set('n', '<leader>cc', 'gcc', { remap = true, desc = '[C]ode [C]omment toggle' })
+  vim.keymap.set('x', '<leader>cc', 'gc', { remap = true, desc = '[C]ode [C]omment toggle' })
 
   -- Simple and easy statusline.
   --  You could remove this setup call if you don't like it,
@@ -724,6 +726,17 @@ do
       -- WARN: This is not Goto Definition, this is Goto Declaration.
       --  For example, in C this would take you to the header.
       map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+
+      -- <leader>c — [C]ode group: mnemonic aliases of the gr* maps above.
+      map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction', { 'n', 'x' })
+      map('<leader>cr', vim.lsp.buf.rename, '[C]ode [R]ename')
+
+      local pick = require 'telescope.builtin'
+      map('<leader>cd', pick.lsp_definitions, '[C]ode goto [D]efinition')
+      map('<leader>cD', vim.lsp.buf.declaration, '[C]ode goto [D]eclaration')
+      map('<leader>cf', pick.lsp_references, '[C]ode [F]ind references')
+      map('<leader>ci', pick.lsp_implementations, '[C]ode goto [I]mplementation')
+      map('<leader>ct', pick.lsp_type_definitions, '[C]ode goto [T]ype definition')
 
       -- The following two autocommands are used to highlight references of the
       -- word under your cursor when your cursor rests there for a little while.
@@ -970,9 +983,7 @@ do
 
       ['<S-Tab>'] = {
         'snippet_backward',
-        function()
-          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-d>', true, true, true), 'n', true)
-        end,
+        function() vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-d>', true, true, true), 'n', true) end,
       },
 
       -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:

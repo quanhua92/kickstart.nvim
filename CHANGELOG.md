@@ -11,11 +11,10 @@ Stock kickstart already requires: `git`, `make`, `unzip`, C compiler (`gcc`), `r
 | External tool | Required by | Install | If missing |
 |---|---|---|---|
 | **Nerd Font** | bufferline, neo-tree icons (SECTION 1 sets `have_nerd_font = true`) | [nerdfonts.com](https://www.nerdfonts.com/) | Icons render as boxes; set `have_nerd_font = false` |
-| **Node.js v22+ + npm** | copilot.lua (v22+ required), pyright LSP, jsonls/ts_ls | `curl -fsSL https://deb.nodesource.com/setup_22.x \| sudo -E bash - && sudo apt install -y nodejs` | copilot.lua errors on v20; jsonls/ts_ls auto-skip (conditional on `npm`); pyright won't install via Mason |
+| **Node.js v22+ + npm** | pyright LSP, jsonls/ts_ls | `curl -fsSL https://deb.nodesource.com/setup_22.x \| sudo -E bash - && sudo apt install -y nodejs` | jsonls/ts_ls auto-skip (conditional on `npm`); pyright won't install via Mason |
 | **Python 3** | pyright venv detection (`<leader>r`), ruff | `sudo apt install -y python3` | pyright/ruff won't install via Mason |
 | **uv** | `<leader>r` runs `:UVRunFile` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | `<leader>r` is a no-op; uv.nvim loads but command fails |
 | **Rust toolchain** | rust_analyzer LSP | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` | rust_analyzer won't install via Mason |
-| **GitHub Copilot subscription** | copilot.lua (`<C-j>` accept) | `:Copilot auth` on first run | Plugin loads but no suggestions appear |
 
 ---
 
@@ -64,12 +63,8 @@ vim.pack.add { 'https://github.com/max397574/better-escape.nvim' }
 require('better_escape').setup {}
 ```
 
-## 5. Copilot — `lua/custom/plugins/copilot.lua` + `init.lua` SECTION 3
-copilot.lua (vim.pack): `<C-j>` accept, `<M-]>`/`<M-[>` next/prev, `<C-]>` dismiss, auto_trigger.
-SECTION 3 PackChanged hook:
-```lua
-if name == 'copilot.lua' then vim.schedule(function() vim.cmd 'Copilot auth' end) return end
-```
+## 5. Copilot — REMOVED
+copilot.lua (`lua/custom/plugins/copilot.lua`) and its PackChanged auth hook in `init.lua` SECTION 3 were deleted. Re-add manually if needed.
 
 ## 6. Telescope find keys — `init.lua` SECTION 5
 ```lua
@@ -85,13 +80,14 @@ Conform format key: `<leader>f` → `<leader>fc` (SECTION 7).
 ```lua
 local servers = {
   jsonls = {}, ts_ls = {}, rust_analyzer = {},  -- jsonls/ts_ls conditional on npm (see Prerequisites)
-  pyright = { cmd = venv-aware, settings = { python = { analysis = { indexing = false, ... } } } },
+  pyright = { cmd = venv-aware, settings = { python = { analysis = { indexing = true, autoImportCompletions = true, ... } } } },
   ruff = { on_init = disable hoverProvider },
   ...
 }
 -- gd alias for go-to-definition (SECTION 5 LspAttach):
 vim.keymap.set('n', 'gd', builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
 ```
+pyright was flipped from `indexing/autoImportCompletions = false` to `true` (heavier first-open CPU cost while site-packages get indexed; richer completions afterwards).
 
 ## 8. Python workflow — `lua/custom/plugins/uv.lua` + `init.lua` SECTION 2/7
 uv.lua (vim.pack): `picker_integration = true, silent = true`
@@ -129,7 +125,7 @@ vim.api.nvim_create_user_command('PackUpdate', function() vim.pack.update() end,
 Usage: `:PackStatus` to inspect, `:PackUpdate` to fetch updates.
 
 ## 15. multicursor.nvim — `lua/custom/plugins/multicursor.lua`
-vim.pack (branch `1.0`). Keymaps adapted so they don't collide with the `<leader>s` (search) group: match-skip + extra actions live under a new `<leader>c` ([C]ursor) group. Mappings only apply in `n`/`x` mode; the cursor layer (rotate/delete/clear) auto-activates while multiple cursors exist, so the normal `<esc>` (nohlsearch) still works with a single cursor.
+vim.pack (branch `1.0`). Keymaps adapted so they don't collide with the `<leader>s` (search) or `<leader>c` (code) groups: match-skip + extra actions live under a `<leader>m` ([M]ulticursor) group. Mappings only apply in `n`/`x` mode; the cursor layer (rotate/delete/clear) auto-activates while multiple cursors exist, so the normal `<esc>` (nohlsearch) still works with a single cursor.
 
 Add cursors vertically (column editing):
 ```
@@ -139,9 +135,9 @@ Add cursors vertically (column editing):
 Add cursors by matching text (rename-all style):
 ```
 <leader>n  / <leader>N   add cursor on next/previous match of word under cursor
-<leader>cn / <leader>cN  skip next/previous match
-<leader>ca               add cursor to ALL matches in buffer
-<leader>cr               restore accidentally cleared cursors
+<leader>mn / <leader>mN  skip next/previous match
+<leader>ma               add cursor to ALL matches in buffer
+<leader>mr               restore accidentally cleared cursors
 <C-LeftMouse>            add/remove a cursor by clicking
 ```
 While multiple cursors are active (overlay layer):
@@ -152,9 +148,31 @@ While multiple cursors are active (overlay layer):
 <esc>                    clear all cursors
 ```
 Typical workflows:
-- Rename a word everywhere: cursor on word → `<leader>ca` → edit → `<esc>`.
+- Rename a word everywhere: cursor on word → `<leader>ma` → edit → `<esc>`.
 - Edit a column block: `<down>` ×N to stack cursors → `I`/`A` to insert at start/end → type → `<esc>`.
-- Selective matches: `<leader>n` to add next match, `<leader>cn` to skip one you don't want.
+- Selective matches: `<leader>n` to add next match, `<leader>mn` to skip one you don't want.
+
+## 16. `<leader>c` [C]ode group — `init.lua` SECTION 4/6
+`mini.comment` enabled (stock kickstart ships it unset), aliased into the group. LSP actions get mnemonic aliases (defined buffer-local in LspAttach; `gr*` originals kept):
+```
+<leader>cc   toggle comment line/selection   (also gcc / gc operator)
+<leader>ca   code action                     (= gra)
+<leader>cr   rename symbol                   (= grn)
+<leader>cd   goto definition                 (= grd)
+<leader>cD   goto declaration                (= grD)
+<leader>cf   find references                 (= grr)
+<leader>ci   goto implementation             (= gri)
+<leader>ct   goto type definition            (= grt)
+```
+
+## 17. persistence.nvim — `lua/custom/plugins/persistence.lua`
+vim.pack. Sessions auto-save on exit to `stdpath/state/sessions/`, restoring windows, tabs, buffers and layout:
+```
+<leader>qs   restore session for cwd
+<leader>qS   pick a session
+<leader>ql   restore last session
+<leader>qd   quit without saving the session
+```
 
 ## Migration note
 Ported from lazy.nvim → vim.pack on 2026-07-28. Plugin specs in `lua/custom/plugins/*.lua` were rewritten from LazySpec tables to self-executing `vim.pack.add` + `setup()` calls. Old lazy.nvim version preserved on branch `backup/lazy-config`.
